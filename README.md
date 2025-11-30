@@ -9,6 +9,9 @@ A configurable web dashboard for operational reporting with SQL data. Built with
 ## 📋 Overview
 
 Dashboard Analytics is a flexible, production-ready web application for creating operational dashboards with real-time data visualization. It supports multiple data domains including financial transactions and equipment monitoring, with easy customization for other use cases.
+<img width="1884" height="903" alt="image" src="https://github.com/user-attachments/assets/73f29cd8-644f-471e-a2cd-b810c0fb6c4a" />
+<img width="1900" height="919" alt="image" src="https://github.com/user-attachments/assets/b02dceb3-fcd9-4b89-9648-87240d2ad14a" />
+
 
 ### Key Features
 
