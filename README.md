@@ -1,5 +1,5 @@
-# Dashboard Analytics [EN] 
-[🇷🇺](README_RU.md)
+# Dashboard Analytics [🇷🇺](README_RU.md) [EN] 
+
 A configurable web dashboard for operational reporting with SQL data. Built with Python, FastAPI, and modern web technologies.
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
