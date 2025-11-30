@@ -1,4 +1,4 @@
-# Dashboard Analytics [🇷🇺](README_RU.md) [EN] 
+# Dashboard Analytics [EN] [🇷🇺](README_RU.md) 
 
 A configurable web dashboard for operational reporting with SQL data. Built with Python, FastAPI, and modern web technologies.
 
