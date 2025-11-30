@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t.transactions_title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-cash-coin text-primary"></i> {{ t.transactions_title }}
+        </h2>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filter-section">
+    <h5 class="mb-3"><i class="bi bi-funnel"></i> {{ t.filters }}</h5>
+    <form id="filterForm">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <label for="startDate" class="form-label">{{ t.start_date }}</label>
+                <input type="date" class="form-control" id="startDate" name="start_date">
+            </div>
+            <div class="col-md-3">
+                <label for="endDate" class="form-label">{{ t.end_date }}</label>
+                <input type="date" class="form-control" id="endDate" name="end_date">
+            </div>
+            <div class="col-md-2">
+                <label for="category" class="form-label">{{ t.category }}</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">{{ t.all_categories }}</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">{{ t.status }}</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">{{ t.all_statuses }}</option>
+                    {% for st in statuses %}
+                    <option value="{{ st }}">{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="groupBy" class="form-label">{{ t.group_by }}</label>
+                <select class="form-select" id="groupBy" name="group_by">
+                    <option value="day">{{ t.day }}</option>
+                    <option value="month">{{ t.month }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-search"></i> {{ t.apply_filters }}
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                    <i class="bi bi-arrow-clockwise"></i> {{ t.reset }}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Key Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.total_amount }}</div>
+            <div class="metric-value" id="totalAmount">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.transaction_count }}</div>
+            <div class="metric-value text-success" id="transactionCount">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.average_amount }}</div>
+            <div class="metric-value text-info" id="averageAmount">
+                <div class="spinner-border text-info" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.max_amount }}</div>
+            <div class="metric-value text-warning" id="maxAmount">
+                <div class="spinner-border text-warning" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h5 class="mb-3"><i class="bi bi-graph-up"></i> {{ t.time_series }}</h5>
+            <div id="timeSeriesChart"></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3"><i class="bi bi-pie-chart"></i> {{ t.category_breakdown_chart }}</h5>
+            <div id="categoryChart"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="table-container">
+    <h5 class="mb-3"><i class="bi bi-table"></i> {{ t.transaction_details }}</h5>
+    <div class="table-responsive">
+        <table class="table table-hover" id="transactionTable">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ t.id }}</th>
+                    <th>{{ t.date }}</th>
+                    <th>{{ t.category }}</th>
+                    <th>{{ t.amount }}</th>
+                    <th>{{ t.status }}</th>
+                    <th>{{ t.customer_id }}</th>
+                    <th>{{ t.description }}</th>
+                </tr>
+            </thead>
+            <tbody id="transactionTableBody">
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Format currency
+    function formatCurrency(value) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD'
+        }).format(value);
+    }
+
+    // Format date
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleString();
+    }
+
+    // Get filter parameters
+    function getFilterParams() {
+        const formData = new FormData(document.getElementById('filterForm'));
+        const params = new URLSearchParams();
+        
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        return params.toString();
+    }
+
+    // Load metrics
+    async function loadMetrics() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/transactions/metrics?${params}`);
+        const data = await response.json();
+        
+        document.getElementById('totalAmount').textContent = formatCurrency(data.total_amount);
+        document.getElementById('transactionCount').textContent = data.count.toLocaleString();
+        document.getElementById('averageAmount').textContent = formatCurrency(data.average);
+        document.getElementById('maxAmount').textContent = formatCurrency(data.max);
+    }
+
+    // Load time series chart
+    async function loadTimeSeriesChart() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/transactions/time-series?${params}`);
+        const data = await response.json();
+        
+        const trace = {
+            x: data.map(d => d.period),
+            y: data.map(d => d.total_amount),
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Total Amount',
+            line: { color: '#0d6efd', width: 2 },
+            marker: { size: 8 }
+        };
+        
+        const layout = {
+            xaxis: { title: 'Period' },
+            yaxis: { title: 'Amount ($)' },
+            hovermode: 'closest',
+            showlegend: true
+        };
+        
+        Plotly.newPlot('timeSeriesChart', [trace], layout, {responsive: true});
+    }
+
+    // Load category chart
+    async function loadCategoryChart() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/transactions/category-breakdown?${params}`);
+        const data = await response.json();
+        
+        const trace = {
+            labels: data.map(d => d.category),
+            values: data.map(d => d.total_amount),
+            type: 'pie',
+            hole: 0.4
+        };
+        
+        const layout = {
+            showlegend: true
+        };
+        
+        Plotly.newPlot('categoryChart', [trace], layout, {responsive: true});
+    }
+
+    // Load transaction table
+    async function loadTransactionTable() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/transactions/list?${params}`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('transactionTableBody');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = data.map(t => `
+            <tr>
+                <td>${t.id}</td>
+                <td>${formatDate(t.date)}</td>
+                <td><span class="badge bg-secondary">${t.category}</span></td>
+                <td>${formatCurrency(t.amount)}</td>
+                <td><span class="badge bg-${t.status === 'completed' ? 'success' : 'warning'}">${t.status}</span></td>
+                <td>${t.customer_id || '-'}</td>
+                <td>${t.description || '-'}</td>
+            </tr>
+        `).join('');
+    }
+
+    // Load all data
+    async function loadAllData() {
+        try {
+            await Promise.all([
+                loadMetrics(),
+                loadTimeSeriesChart(),
+                loadCategoryChart(),
+                loadTransactionTable()
+            ]);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            alert('Error loading data. Please try again.');
+        }
+    }
+
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('filterForm').reset();
+        loadAllData();
+    }
+
+    // Form submit handler
+    document.getElementById('filterForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        loadAllData();
+    });
+
+    // Load data on page load
+    loadAllData();
+</script>
+{% endblock %}

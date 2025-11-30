@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block title %}{{ t.equipment_title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-gear text-success"></i> {{ t.equipment_title }}
+        </h2>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filter-section">
+    <h5 class="mb-3"><i class="bi bi-funnel"></i> {{ t.filters }}</h5>
+    <form id="filterForm">
+        <div class="row g-3">
+            <div class="col-md-2">
+                <label for="startDate" class="form-label">{{ t.start_date }}</label>
+                <input type="date" class="form-control" id="startDate" name="start_date">
+            </div>
+            <div class="col-md-2">
+                <label for="endDate" class="form-label">{{ t.end_date }}</label>
+                <input type="date" class="form-control" id="endDate" name="end_date">
+            </div>
+            <div class="col-md-2">
+                <label for="equipmentId" class="form-label">{{ t.equipment }}</label>
+                <select class="form-select" id="equipmentId" name="equipment_id">
+                    <option value="">{{ t.all_equipment }}</option>
+                    {% for eq in equipment_ids %}
+                    <option value="{{ eq }}">{{ eq }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="metricName" class="form-label">{{ t.metric }}</label>
+                <select class="form-select" id="metricName" name="metric_name">
+                    <option value="">{{ t.all_metrics }}</option>
+                    {% for metric in metric_names %}
+                    <option value="{{ metric }}">{{ metric }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label">{{ t.status }}</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">{{ t.all_statuses }}</option>
+                    {% for st in statuses %}
+                    <option value="{{ st }}">{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="groupBy" class="form-label">{{ t.group_by }}</label>
+                <select class="form-select" id="groupBy" name="group_by">
+                    <option value="day">{{ t.day }}</option>
+                    <option value="month">{{ t.month }}</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-12">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-search"></i> {{ t.apply_filters }}
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                    <i class="bi bi-arrow-clockwise"></i> {{ t.reset }}
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Key Metrics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.measurement_count }}</div>
+            <div class="metric-value text-success" id="measurementCount">
+                <div class="spinner-border text-success" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.average_value }}</div>
+            <div class="metric-value text-primary" id="averageValue">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.min_value }}</div>
+            <div class="metric-value text-info" id="minValue">
+                <div class="spinner-border text-info" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card">
+            <div class="metric-label">{{ t.max_value }}</div>
+            <div class="metric-value text-danger" id="maxValue">
+                <div class="spinner-border text-danger" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts -->
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h5 class="mb-3"><i class="bi bi-graph-up"></i> {{ t.time_series }}</h5>
+            <div id="timeSeriesChart"></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="chart-container">
+            <h5 class="mb-3"><i class="bi bi-bar-chart"></i> {{ t.equipment_breakdown }}</h5>
+            <div id="equipmentChart"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="table-container">
+    <h5 class="mb-3"><i class="bi bi-table"></i> {{ t.measurement_details }}</h5>
+    <div class="table-responsive">
+        <table class="table table-hover" id="equipmentTable">
+            <thead class="table-light">
+                <tr>
+                    <th>{{ t.id }}</th>
+                    <th>{{ t.timestamp }}</th>
+                    <th>{{ t.equipment }}</th>
+                    <th>{{ t.metric }}</th>
+                    <th>{{ t.value }}</th>
+                    <th>{{ t.unit }}</th>
+                    <th>{{ t.status }}</th>
+                </tr>
+            </thead>
+            <tbody id="equipmentTableBody">
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Format number
+    function formatNumber(value, decimals = 2) {
+        return Number(value).toFixed(decimals);
+    }
+
+    // Format date
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleString();
+    }
+
+    // Get filter parameters
+    function getFilterParams() {
+        const formData = new FormData(document.getElementById('filterForm'));
+        const params = new URLSearchParams();
+        
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        return params.toString();
+    }
+
+    // Load metrics
+    async function loadMetrics() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/equipment/metrics?${params}`);
+        const data = await response.json();
+        
+        document.getElementById('measurementCount').textContent = data.count.toLocaleString();
+        document.getElementById('averageValue').textContent = formatNumber(data.average);
+        document.getElementById('minValue').textContent = formatNumber(data.min);
+        document.getElementById('maxValue').textContent = formatNumber(data.max);
+    }
+
+    // Load time series chart
+    async function loadTimeSeriesChart() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/equipment/time-series?${params}`);
+        const data = await response.json();
+        
+        const traceAvg = {
+            x: data.map(d => d.period),
+            y: data.map(d => d.avg_value),
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Average',
+            line: { color: '#0d6efd', width: 2 },
+            marker: { size: 6 }
+        };
+        
+        const traceMin = {
+            x: data.map(d => d.period),
+            y: data.map(d => d.min_value),
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Min',
+            line: { color: '#17a2b8', width: 1, dash: 'dash' }
+        };
+        
+        const traceMax = {
+            x: data.map(d => d.period),
+            y: data.map(d => d.max_value),
+            type: 'scatter',
+            mode: 'lines',
+            name: 'Max',
+            line: { color: '#dc3545', width: 1, dash: 'dash' }
+        };
+        
+        const layout = {
+            xaxis: { title: 'Period' },
+            yaxis: { title: 'Value' },
+            hovermode: 'closest',
+            showlegend: true
+        };
+        
+        Plotly.newPlot('timeSeriesChart', [traceAvg, traceMin, traceMax], layout, {responsive: true});
+    }
+
+    // Load equipment chart
+    async function loadEquipmentChart() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/equipment/equipment-breakdown?${params}`);
+        const data = await response.json();
+        
+        const trace = {
+            x: data.map(d => d.equipment_id),
+            y: data.map(d => d.average_value),
+            type: 'bar',
+            marker: { color: '#28a745' }
+        };
+        
+        const layout = {
+            xaxis: { title: 'Equipment' },
+            yaxis: { title: 'Average Value' },
+            showlegend: false
+        };
+        
+        Plotly.newPlot('equipmentChart', [trace], layout, {responsive: true});
+    }
+
+    // Load equipment table
+    async function loadEquipmentTable() {
+        const params = getFilterParams();
+        const response = await fetch(`/api/v1/equipment/list?${params}`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('equipmentTableBody');
+        
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = data.map(m => `
+            <tr>
+                <td>${m.id}</td>
+                <td>${formatDate(m.timestamp)}</td>
+                <td><span class="badge bg-secondary">${m.equipment_id}</span></td>
+                <td>${m.metric_name}</td>
+                <td><strong>${formatNumber(m.value)}</strong></td>
+                <td>${m.unit || '-'}</td>
+                <td><span class="badge bg-${m.status === 'normal' ? 'success' : m.status === 'warning' ? 'warning' : 'danger'}">${m.status}</span></td>
+            </tr>
+        `).join('');
+    }
+
+    // Load all data
+    async function loadAllData() {
+        try {
+            await Promise.all([
+                loadMetrics(),
+                loadTimeSeriesChart(),
+                loadEquipmentChart(),
+                loadEquipmentTable()
+            ]);
+        } catch (error) {
+            console.error('Error loading data:', error);
+            alert('Error loading data. Please try again.');
+        }
+    }
+
+    // Reset filters
+    function resetFilters() {
+        document.getElementById('filterForm').reset();
+        loadAllData();
+    }
+
+    // Form submit handler
+    document.getElementById('filterForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        loadAllData();
+    });
+
+    // Load data on page load
+    loadAllData();
+</script>
+{% endblock %}
